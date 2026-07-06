@@ -6,8 +6,11 @@ RAG notes and Hermes skill assets for the local Raspberry Pi 2 PCA9685 servo set
 
 - Raspberry Pi physical pin 3 / GPIO2 / SDA1 -> PCA9685 SDA
 - Raspberry Pi physical pin 5 / GPIO3 / SCL1 -> PCA9685 SCL
+- Raspberry Pi physical pin 3 / GPIO2 / SDA1 -> GY-9250 SDA
+- Raspberry Pi physical pin 5 / GPIO3 / SCL1 -> GY-9250 SCL
 - I2C bus used: `/dev/i2c-1`
 - PCA9685 observed address: `0x40`
+- GY-9250 / MPU-9250 observed address: `0x68`, `WHO_AM_I=0x71`
 - PCA9685 all-call address: `0x70`
 
 Servos require proper V+ servo power and common GND with the Raspberry Pi/PCA9685.
@@ -21,9 +24,11 @@ skills/raspberry-pi-hardware-control/
     adafruit-servokit-pca9685.md
     pca9685-servo-smoke-test.md
     pca9685-servokit-session-rag.md
+    gy9250-two-channel-servo-rag.md
   scripts/
     pca9685_ch0_ch1_wide.py
     servokit_ch0_ch1_2min.py
+    gy9250_two_channel_servo_trigger.py
   templates/
     servokit_ch0_smoke_test.py
 ```
@@ -33,7 +38,7 @@ skills/raspberry-pi-hardware-control/
 ```bash
 python3 -m venv /home/pi2/pca9685-venv
 /home/pi2/pca9685-venv/bin/pip install --upgrade pip setuptools wheel
-/home/pi2/pca9685-venv/bin/pip install adafruit-circuitpython-servokit
+/home/pi2/pca9685-venv/bin/pip install adafruit-circuitpython-servokit smbus2
 ```
 
 Run scripts with:
@@ -61,6 +66,14 @@ Manual PCA9685 register-level wide range test:
 ```bash
 python3 skills/raspberry-pi-hardware-control/scripts/pca9685_ch0_ch1_wide.py
 ```
+
+GY-9250 horizontal/tilt two-channel servo trigger:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/gy9250_two_channel_servo_trigger.py --seconds 60 --threshold 0.08 --tilt-threshold 12
+```
+
+Behavior: horizontal / XY movement triggers PCA9685 channel 0; tilt / orientation change triggers channel 1. Both channels alternate 60/120 degrees and return to 90 degrees on exit.
 
 ## Notes
 
