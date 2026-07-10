@@ -8,9 +8,12 @@ RAG notes and Hermes skill assets for the local Raspberry Pi 2 PCA9685 servo set
 - Raspberry Pi physical pin 5 / GPIO3 / SCL1 -> PCA9685 SCL
 - Raspberry Pi physical pin 3 / GPIO2 / SDA1 -> GY-9250 SDA
 - Raspberry Pi physical pin 5 / GPIO3 / SCL1 -> GY-9250 SCL
+- Raspberry Pi physical pin 3 / GPIO2 / SDA1 -> GY-530 / VL53L0X SDA
+- Raspberry Pi physical pin 5 / GPIO3 / SCL1 -> GY-530 / VL53L0X SCL
 - I2C bus used: `/dev/i2c-1`
 - PCA9685 observed address: `0x40`
 - GY-9250 / MPU-9250 observed address: `0x68`, `WHO_AM_I=0x71`
+- GY-530 / VL53L0X observed address: `0x29`
 - PCA9685 all-call address: `0x70`
 
 Servos require proper V+ servo power and common GND with the Raspberry Pi/PCA9685.
@@ -25,10 +28,13 @@ skills/raspberry-pi-hardware-control/
     pca9685-servo-smoke-test.md
     pca9685-servokit-session-rag.md
     gy9250-two-channel-servo-rag.md
+    vl53l0x-distance-servo-rag.md
   scripts/
     pca9685_ch0_ch1_wide.py
     servokit_ch0_ch1_2min.py
     gy9250_two_channel_servo_trigger.py
+    vl53l0x_servo_ch0_object_1min.py
+    vl53l0x_servo_ch0_change_1min.py
   templates/
     servokit_ch0_smoke_test.py
 ```
@@ -74,6 +80,22 @@ GY-9250 horizontal/tilt two-channel servo trigger:
 ```
 
 Behavior: horizontal / XY movement triggers PCA9685 channel 0; tilt / orientation change triggers channel 1. Both channels alternate 60/120 degrees and return to 90 degrees on exit.
+
+VL53L0X object-present channel 0 trigger:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/vl53l0x_servo_ch0_object_1min.py
+```
+
+Behavior: if an object is detected within the configured range, PCA9685 channel 0 sweeps 60/120 degrees; if no object is detected, channel 0 holds 90 degrees. The script runs for 60 seconds by default and returns channel 0 to 90 degrees on exit.
+
+VL53L0X distance-change channel 0 trigger:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/vl53l0x_servo_ch0_change_1min.py
+```
+
+Behavior: channel 0 moves only when the VL53L0X distance changes by at least the configured threshold, default 50 mm, then recenters when readings become stable. The script runs for 60 seconds by default and returns channel 0 to 90 degrees on exit.
 
 ## Notes
 

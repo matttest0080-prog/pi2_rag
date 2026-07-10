@@ -6,7 +6,7 @@ author: Hermes Agent
 license: MIT
 metadata:
   hermes:
-    tags: [raspberry-pi, gpio, i2c, pwm, pca9685, servo, hardware, gy9250, mpu9250, imu]
+    tags: [raspberry-pi, gpio, i2c, pwm, pca9685, servo, hardware, gy9250, mpu9250, imu, vl53l0x, tof]
     related_skills: []
 ---
 
@@ -19,7 +19,7 @@ Use this skill for local Raspberry Pi hardware work: verifying buses, testing se
 ## When to Use
 
 - The user asks to test or control a device connected to Raspberry Pi GPIO, I2C, SPI, UART, or PWM.
-- The user gives physical pin wiring, GPIO numbers, I2C addresses, or module names such as PCA9685, GY-9250, or MPU-9250.
+- The user gives physical pin wiring, GPIO numbers, I2C addresses, or module names such as PCA9685, GY-9250, MPU-9250, GY-530, or VL53L0X.
 - The task involves servos, LEDs, relays, sensors, motor drivers, or other attached hardware.
 - You need to enable an interface, probe a bus, or run a short hardware smoke test.
 
@@ -71,9 +71,12 @@ See `references/pca9685-servo-smoke-test.md` for the exact register-level Python
 See `references/adafruit-servokit-pca9685.md` for ServoKit setup, corrected loop examples, and multi-channel testing notes.
 See `references/pca9685-servokit-session-rag.md` for the RAG-style retrieval notes from the verified local session: wiring, observed I2C scan, ServoKit install path, pulse mapping, and the confirmed 2-minute CH0/CH1 sequence.
 See `references/gy9250-two-channel-servo-rag.md` for GY-9250 horizontal-vs-tilt two-channel servo notes and verification pattern.
+See `references/vl53l0x-distance-servo-rag.md` for VL53L0X object-present and distance-change channel 0 trigger notes and verified one-minute outputs.
 Template: `templates/servokit_ch0_smoke_test.py` is a one-shot ServoKit channel-0 smoke test that leaves the servo centered.
 Script: `scripts/servokit_ch0_ch1_2min.py` runs the confirmed 120-second CH0/CH1 ServoKit stress test and returns both servos to 90 degrees.
 Script: `scripts/pca9685_ch0_ch1_wide.py` is the wider register-level CH0/CH1 test matching ServoKit's approximate 750/1500/2250us range.
+Script: `scripts/vl53l0x_servo_ch0_object_1min.py` sweeps channel 0 while a VL53L0X object is within range and returns to center when no object is detected.
+Script: `scripts/vl53l0x_servo_ch0_change_1min.py` moves channel 0 only when VL53L0X distance changes by a threshold, then recenters during stable readings.
 
 
 ## GY-9250 / MPU-9250 Servo Trigger Pattern
@@ -100,6 +103,28 @@ Run the reusable script:
 
 See `references/gy9250-two-channel-servo-rag.md` for RAG notes and verification pattern.
 Script: `scripts/gy9250_two_channel_servo_trigger.py` maps horizontal motion to channel 0 and tilt to channel 1.
+
+## VL53L0X / GY-530 Distance Servo Trigger Pattern
+
+Confirmed local VL53L0X context:
+
+- Physical pin 3 / GPIO2 / SDA1 -> VL53L0X SDA.
+- Physical pin 5 / GPIO3 / SCL1 -> VL53L0X SCL.
+- Bus 1 address `0x29`; PCA9685 is on the same bus at `0x40`.
+- Use `/home/pi2/pca9685-venv/bin/python`; that venv has ServoKit and Adafruit VL53L0X libraries.
+
+For object-present triggering, treat finite readings from 20 mm through `DETECT_MM` as an object and sweep channel 0 between 60/120 degrees while present. For change-only triggering, compare each valid reading with the previous valid reading and move channel 0 only when `abs(delta) >= CHANGE_MM`; use 50 mm as the known-good default to avoid jitter-triggered motion.
+
+Run the reusable scripts:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/vl53l0x_servo_ch0_object_1min.py
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/vl53l0x_servo_ch0_change_1min.py
+```
+
+Both scripts run for 60 seconds by default, keep motion conservative at 60/90/120 degrees, expose tuning through environment variables, and return channel 0 to 90 degrees in `finally`.
+
+See `references/vl53l0x-distance-servo-rag.md` for RAG notes, verified outputs, and tuning knobs.
 
 ## Power and Safety Pitfalls
 
