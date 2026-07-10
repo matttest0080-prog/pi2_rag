@@ -97,6 +97,14 @@ VL53L0X distance-change channel 0 trigger:
 
 Behavior: channel 0 moves only when the VL53L0X distance changes by at least the configured threshold, default 50 mm, then recenters when readings become stable. The script runs for 60 seconds by default and returns channel 0 to 90 degrees on exit.
 
+Full integration test: VL53L0X + GY-9250 + PCA9685 channel 0/channel 1:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/all_integration_vl53_gy9250_pca9685.py
+```
+
+Behavior: performs a conservative channel 0/channel 1 smoke motion, reads VL53L0X distance and GY-9250 accelerometer together for 60 seconds, maps VL53L0X distance changes and GY-9250 horizontal motion to channel 0, maps GY-9250 tilt to channel 1, and returns both servos to 90 degrees on exit.
+
 ## Notes
 
 ServoKit default mapping observed on this setup:

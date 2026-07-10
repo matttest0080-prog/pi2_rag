@@ -126,6 +126,39 @@ SUMMARY readings=432 valid_readings=432 change_events=7 min_mm=100 max_mm=189
 
 Interpretation: 7 distance-change events were detected in one minute; each event commanded channel 0 once, and stable periods recentered the servo.
 
+## Full integration test: VL53L0X + GY-9250 + PCA9685
+
+Script:
+
+```bash
+/home/pi2/pca9685-venv/bin/python skills/raspberry-pi-hardware-control/scripts/all_integration_vl53_gy9250_pca9685.py
+```
+
+Default behavior:
+
+- Performs a conservative servo smoke sequence: channel 0 and channel 1 center -> 60 -> 120 -> center.
+- Calibrates the GY-9250 still baseline.
+- Runs a 60-second loop reading VL53L0X and GY-9250 together.
+- VL53L0X distance changes of at least 50 mm trigger channel 0.
+- GY-9250 horizontal XY acceleration of at least 0.08 g also triggers channel 0.
+- GY-9250 tilt of at least 12 degrees triggers channel 1.
+- Stable periods recenter both channels.
+- `finally` returns channel 0 and channel 1 to 90 degrees.
+
+Verified local run summary:
+
+```text
+GY9250 WHO_AM_I=0x71
+GY9250 baseline=(-0.047,+0.021,-0.897)g
+41.8s CH0 VL53_CHANGE delta=59mm distance=114mm -> angle 60
+42.5s CH0 VL53_CHANGE delta=69mm distance=183mm -> angle 120
+44.7s CH0 VL53_CHANGE delta=64mm distance=181mm -> angle 60
+49.6s CH0 GY_HORIZONTAL h=0.185g -> angle 120
+49.6s CH1 GY_TILT tilt=12.4deg -> angle 60
+SUMMARY readings=417 valid_readings=417 min_mm=104 max_mm=195 max_delta_mm=69 vl53_changes=5 h_events=6 tilt_events=1 max_h=0.210g max_tilt=13.3deg
+STOP ch0_center=90 ch1_center=90
+```
+
 ## Tuning knobs
 
 Both scripts read environment variables, so tests can be adjusted without editing files:

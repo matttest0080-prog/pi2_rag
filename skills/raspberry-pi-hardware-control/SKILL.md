@@ -124,6 +124,8 @@ Run the reusable scripts:
 
 Both scripts run for 60 seconds by default, keep motion conservative at 60/90/120 degrees, expose tuning through environment variables, and return channel 0 to 90 degrees in `finally`.
 
+For full integration, run `scripts/all_integration_vl53_gy9250_pca9685.py`. It performs a conservative CH0/CH1 smoke motion, reads VL53L0X and GY-9250 together for 60 seconds, maps VL53L0X distance changes plus GY-9250 horizontal motion to channel 0, maps GY-9250 tilt to channel 1, and recenters both servos on exit.
+
 See `references/vl53l0x-distance-servo-rag.md` for RAG notes, verified outputs, and tuning knobs.
 
 ## Power and Safety Pitfalls
