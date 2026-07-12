@@ -29,12 +29,15 @@ skills/raspberry-pi-hardware-control/
     pca9685-servokit-session-rag.md
     gy9250-two-channel-servo-rag.md
     vl53l0x-distance-servo-rag.md
+    csi-camera-opencv-yolo-tiny.md
   scripts/
     pca9685_ch0_ch1_wide.py
     servokit_ch0_ch1_2min.py
     gy9250_two_channel_servo_trigger.py
     vl53l0x_servo_ch0_object_1min.py
     vl53l0x_servo_ch0_change_1min.py
+    yolo_tiny_csi_detect.py
+    yolo_tiny_csi_video.py
   templates/
     servokit_ch0_smoke_test.py
 ```
@@ -104,6 +107,20 @@ Full integration test: VL53L0X + GY-9250 + PCA9685 channel 0/channel 1:
 ```
 
 Behavior: performs a conservative channel 0/channel 1 smoke motion, reads VL53L0X distance and GY-9250 accelerometer together for 60 seconds, maps VL53L0X distance changes and GY-9250 horizontal motion to channel 0, maps GY-9250 tilt to channel 1, and returns both servos to 90 degrees on exit.
+
+CSI camera YOLOv4-tiny one-frame test:
+
+```bash
+python3 skills/raspberry-pi-hardware-control/scripts/yolo_tiny_csi_detect.py --input-size 320 --conf 0.20 --out /tmp/yolo_tiny_csi_detect.jpg
+```
+
+CSI camera YOLOv4-tiny one-minute annotated-video test:
+
+```bash
+python3 skills/raspberry-pi-hardware-control/scripts/yolo_tiny_csi_video.py --duration 60 --input-size 224 --conf 0.15 --out /tmp/yolo_tiny_csi_1min.mp4
+```
+
+Behavior: uses Picamera2 to capture from the OV5647 CSI camera, runs YOLOv4-tiny COCO through OpenCV DNN on sampled frames, and writes annotated image/video outputs under `/tmp`. Model weights and generated videos are intentionally not stored in this repo. See `skills/raspberry-pi-hardware-control/references/csi-camera-opencv-yolo-tiny.md` for model download commands, viewing instructions, and verification notes.
 
 ## Notes
 

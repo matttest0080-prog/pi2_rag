@@ -1,12 +1,12 @@
 ---
 name: raspberry-pi-hardware-control
-description: Use when testing or controlling Raspberry Pi-attached hardware over GPIO, I2C, or PWM expanders such as PCA9685. Emphasizes live discovery, safe motion ranges, wiring verification, and leaving hardware in a known state.
+description: Use when testing or controlling Raspberry Pi-attached hardware over GPIO, I2C, PWM expanders, or CSI camera capture such as PCA9685 servos, sensors, Picamera2/OpenCV, and YOLOv4-tiny object detection tests. Emphasizes live discovery, safe motion ranges, wiring verification, and leaving hardware in a known state.
 version: 1.0.0
 author: Hermes Agent
 license: MIT
 metadata:
   hermes:
-    tags: [raspberry-pi, gpio, i2c, pwm, pca9685, servo, hardware, gy9250, mpu9250, imu, vl53l0x, tof]
+    tags: [raspberry-pi, gpio, i2c, pwm, pca9685, servo, hardware, gy9250, mpu9250, imu, vl53l0x, tof, csi-camera, opencv, picamera2, yolo]
     related_skills: []
 ---
 
@@ -18,8 +18,8 @@ Use this skill for local Raspberry Pi hardware work: verifying buses, testing se
 
 ## When to Use
 
-- The user asks to test or control a device connected to Raspberry Pi GPIO, I2C, SPI, UART, or PWM.
-- The user gives physical pin wiring, GPIO numbers, I2C addresses, or module names such as PCA9685, GY-9250, MPU-9250, GY-530, or VL53L0X.
+- The user asks to test or control a device connected to Raspberry Pi GPIO, I2C, SPI, UART, PWM, or CSI camera.
+- The user gives physical pin wiring, GPIO numbers, I2C addresses, camera modules, or module names such as PCA9685, GY-9250, MPU-9250, GY-530, VL53L0X, OV5647, Picamera2, OpenCV, or YOLO.
 - The task involves servos, LEDs, relays, sensors, motor drivers, or other attached hardware.
 - You need to enable an interface, probe a bus, or run a short hardware smoke test.
 
@@ -72,11 +72,14 @@ See `references/adafruit-servokit-pca9685.md` for ServoKit setup, corrected loop
 See `references/pca9685-servokit-session-rag.md` for the RAG-style retrieval notes from the verified local session: wiring, observed I2C scan, ServoKit install path, pulse mapping, and the confirmed 2-minute CH0/CH1 sequence.
 See `references/gy9250-two-channel-servo-rag.md` for GY-9250 horizontal-vs-tilt two-channel servo notes and verification pattern.
 See `references/vl53l0x-distance-servo-rag.md` for VL53L0X object-present and distance-change channel 0 trigger notes and verified one-minute outputs.
+See `references/csi-camera-opencv-yolo-tiny.md` for CSI camera detection, OpenCV/Picamera2 setup, YOLOv4-tiny model download commands, image/video viewing instructions, and ad-hoc verification patterns.
 Template: `templates/servokit_ch0_smoke_test.py` is a one-shot ServoKit channel-0 smoke test that leaves the servo centered.
 Script: `scripts/servokit_ch0_ch1_2min.py` runs the confirmed 120-second CH0/CH1 ServoKit stress test and returns both servos to 90 degrees.
 Script: `scripts/pca9685_ch0_ch1_wide.py` is the wider register-level CH0/CH1 test matching ServoKit's approximate 750/1500/2250us range.
 Script: `scripts/vl53l0x_servo_ch0_object_1min.py` sweeps channel 0 while a VL53L0X object is within range and returns to center when no object is detected.
 Script: `scripts/vl53l0x_servo_ch0_change_1min.py` moves channel 0 only when VL53L0X distance changes by a threshold, then recenters during stable readings.
+Script: `scripts/yolo_tiny_csi_detect.py` captures one CSI camera frame, runs YOLOv4-tiny COCO through OpenCV DNN, and writes an annotated JPEG under `/tmp`.
+Script: `scripts/yolo_tiny_csi_video.py` captures sampled CSI camera frames for a bounded duration, runs YOLOv4-tiny annotations, and encodes an MP4 under `/tmp` without storing video in the repo.
 
 
 ## GY-9250 / MPU-9250 Servo Trigger Pattern
@@ -127,6 +130,41 @@ Both scripts run for 60 seconds by default, keep motion conservative at 60/90/12
 For full integration, run `scripts/all_integration_vl53_gy9250_pca9685.py`. It performs a conservative CH0/CH1 smoke motion, reads VL53L0X and GY-9250 together for 60 seconds, maps VL53L0X distance changes plus GY-9250 horizontal motion to channel 0, maps GY-9250 tilt to channel 1, and recenters both servos on exit.
 
 See `references/vl53l0x-distance-servo-rag.md` for RAG notes, verified outputs, and tuning knobs.
+
+## CSI Camera OpenCV / YOLOv4-tiny Pattern
+
+Confirmed local CSI camera context:
+
+- Raspberry Pi 2 Model B Rev 1.1 with OV5647 CSI camera detected by `rpicam-hello --list-cameras`.
+- `python3-opencv` is installed from apt and verified as OpenCV 4.10.0.
+- `python3-picamera2` is installed and is the preferred capture path; direct `cv2.VideoCapture('/dev/video0')` can open but fail to read frames.
+- YOLO model files live outside this repo under `/home/pi2/object_detection/models` by default, or can be provided with `YOLO_TINY_MODEL_DIR`.
+
+Download model assets before running object detection:
+
+```bash
+mkdir -p /home/pi2/object_detection/models
+cd /home/pi2/object_detection/models
+curl -L --fail -o coco.names https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names
+curl -L --fail -o yolov4-tiny.cfg https://raw.githubusercontent.com/AlexeyAB/darknet/master/cfg/yolov4-tiny.cfg
+curl -L --fail -o yolov4-tiny.weights https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4-tiny.weights
+```
+
+Run one-frame detection:
+
+```bash
+python3 skills/raspberry-pi-hardware-control/scripts/yolo_tiny_csi_detect.py --input-size 320 --conf 0.20 --out /tmp/yolo_tiny_csi_detect.jpg
+```
+
+Run a one-minute sampled annotated video:
+
+```bash
+python3 skills/raspberry-pi-hardware-control/scripts/yolo_tiny_csi_video.py --duration 60 --input-size 224 --conf 0.15 --out /tmp/yolo_tiny_csi_1min.mp4
+```
+
+On Raspberry Pi 2, expect sampled/non-realtime detection: local YOLOv4-tiny inference took about 5.2 seconds per sampled frame at `--input-size 224`. Serve outputs from `/tmp` with `python3 -m http.server 8000 --bind 0.0.0.0 --directory /tmp` and view `http://<pi-ip>:8000/yolo_tiny_csi_detect.jpg` or `http://<pi-ip>:8000/yolo_tiny_csi_1min.mp4`.
+
+See `references/csi-camera-opencv-yolo-tiny.md` for confirmed outputs, model limitations, and ad-hoc verification steps.
 
 ## Power and Safety Pitfalls
 
