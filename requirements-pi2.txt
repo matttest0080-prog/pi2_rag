@@ -1,0 +1,2 @@
+adafruit-circuitpython-servokit
+smbus2
